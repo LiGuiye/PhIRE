@@ -155,7 +155,7 @@ class loadPhIRE:
         print('Done.')
 
 
-    def load(self, data_path, batch_size=100):
+    def load(self, data_path, saveName, batch_size=100, saveLow=True):
         tf.reset_default_graph()
 
         if self.mu_sig is None:
@@ -179,21 +179,45 @@ class loadPhIRE:
         print('Done.')
         with tf.Session() as sess:
             sess.run(init_iter)
+            # raw data
             batch_idx, batch_LR, batch_HR = sess.run([idx, LR_out, HR_out])
-            print(batch_idx, batch_LR, batch_HR)
+
+            if saveLow:
+                np.save(saveName, batch_LR)
+            else:
+                np.save(saveName, batch_HR)
 
 
 if __name__ == '__main__':
     # there are only 5 images for wind
     # (5, 10, 10, 2) --> (5, 100, 100, 2) --> (5, 500, 500, 2)
-    # data_path = 'example_data/wind_LR-MR.tfrecord'
+
+    data_path = 'example_data/wind_LR-MR.tfrecord'
+    saveName='wind_lr_5x10x10x2.npy'
+    mu_sig=[[0.7684, -0.4575], [4.9491, 5.8441]]
+    load = loadPhIRE(mu_sig)
+    load.load(data_path, batch_size=16, saveName=saveName, saveLow=True)
+
     # data_path = 'example_data/wind_MR-HR.tfrecord'
+    saveName='wind_hr_5x500x500x2.npy'
+    mu_sig=[[0.7684, -0.4575], [5.02455, 5.9017]]
+    load = loadPhIRE(mu_sig)
+    load.load(data_path, batch_size=16, saveName=saveName, saveLow=False)
+
 
     # also only 5 images for solar
     # (5, 20, 20, 2) --> (5, 100, 100, 2) --> (5, 500, 500, 2)
-    # data_path = 'example_data/solar_LR-MR.tfrecord'
-    data_path = 'example_data/solar_MR-HR.tfrecord'
+    data_path = 'example_data/solar_LR-MR.tfrecord'
+    saveName='solar_lr_5x20x20x2.npy'
+    mu_sig=[[344.3262, 113.7444], [370.8409, 111.1224]]
+    load = loadPhIRE(mu_sig)
+    load.load(data_path, batch_size=16, saveName=saveName, saveLow=True)
+
+    # data_path = 'example_data/solar_MR-HR.tfrecord'
+    saveName='solar_hr_5x500x500x2.npy'
+    mu_sig = [[344.3262, 113.7444], [386.9283, 117.9627]]
+    load = loadPhIRE(mu_sig)
+    load.load(data_path, batch_size=16, saveName=saveName, saveLow=False)
 
 
-    load = loadPhIRE()
-    load.load(data_path, batch_size=16)
+    
