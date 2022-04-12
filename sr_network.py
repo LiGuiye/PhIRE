@@ -153,7 +153,7 @@ class SR_NETWORK(object):
 
     def compute_losses(self, x_HR, x_SR, d_HR, d_SR, alpha_advers=0.001, isGAN=False):
         
-        content_loss = tf.reduce_mean((x_HR - x_SR)**2, axis=[1, 2, 3])
+        content_loss = tf.reduce_mean((x_HR - x_SR)**2, axis=[1, 2, 3]) # MSE
 
         if isGAN:
             g_advers_loss = tf.nn.sigmoid_cross_entropy_with_logits(logits=d_SR, labels=tf.ones_like(d_SR))

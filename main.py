@@ -2,7 +2,7 @@
 '''
 from PhIREGANs import *
 
-# WIND - LR-MR
+# WIND - LR-MR (10,10,2)-->(100,100,2)
 #-------------------------------------------------------------
 
 data_type = 'wind'
@@ -59,6 +59,7 @@ if __name__ == '__main__':
     phiregans.test(r=r,
                    data_path=data_path,
                    model_path=model_dir,
-                   batch_size=1)
+                   batch_size=1,
+                   plot_data=True)
 
 
