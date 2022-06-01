@@ -1,6 +1,7 @@
 import tensorflow as tf
 import numpy as np
 
+
 class loadPhIRE:
     def __init__(self, mu_sig=None):
         self.mu_sig = mu_sig
@@ -8,22 +9,24 @@ class loadPhIRE:
 
     def _parse_test_(self, serialized_example, mu_sig=None):
         '''
-            Parser data from TFRecords for the models to read in for testing
+        Parser data from TFRecords for the models to read in for testing
 
-            inputs:
-                serialized_example - batch of data drawn from tfrecord
-                mu_sig             - mean, standard deviation if known
+        inputs:
+            serialized_example - batch of data drawn from tfrecord
+            mu_sig             - mean, standard deviation if known
 
-            outputs:
-                idx     - array of indicies for each sample
-                data_LR - array of LR images in the batch
+        outputs:
+            idx     - array of indicies for each sample
+            data_LR - array of LR images in the batch
         '''
 
-        feature = {'index': tf.FixedLenFeature([], tf.int64),
-                 'data_LR': tf.FixedLenFeature([], tf.string),
-                    'h_LR': tf.FixedLenFeature([], tf.int64),
-                    'w_LR': tf.FixedLenFeature([], tf.int64),
-                       'c': tf.FixedLenFeature([], tf.int64)}
+        feature = {
+            'index': tf.FixedLenFeature([], tf.int64),
+            'data_LR': tf.FixedLenFeature([], tf.string),
+            'h_LR': tf.FixedLenFeature([], tf.int64),
+            'w_LR': tf.FixedLenFeature([], tf.int64),
+            'c': tf.FixedLenFeature([], tf.int64),
+        }
         example = tf.parse_single_example(serialized_example, feature)
 
         idx = example['index']
@@ -37,10 +40,9 @@ class loadPhIRE:
         data_LR = tf.reshape(data_LR, (h_LR, w_LR, c))
 
         if mu_sig is not None:
-            data_LR = (data_LR - mu_sig[0])/mu_sig[1]
+            data_LR = (data_LR - mu_sig[0]) / mu_sig[1]
 
         return idx, data_LR
-
 
     def _parse_train_(self, serialized_example, mu_sig=None):
         '''
@@ -89,12 +91,12 @@ class loadPhIRE:
 
     def set_LR_data_shape(self, data_path):
         '''
-            Get size and shape of LR input data
-            inputs:
-                data_path - (string) path to the tfrecord of the data
+        Get size and shape of LR input data
+        inputs:
+            data_path - (string) path to the tfrecord of the data
 
-            outputs:
-                sets self.LR_data_shape
+        outputs:
+            sets self.LR_data_shape
         '''
         print('Loading data ...', end=' ')
         dataset = tf.data.TFRecordDataset(data_path)
@@ -104,19 +106,19 @@ class loadPhIRE:
         _, LR_out = iterator.get_next()
 
         with tf.Session() as sess:
-            data_LR = sess.run(LR_out) #(1,10,10,2)
-        
-        self.LR_data_shape = data_LR.shape[1:] # (10,10,2)
+            data_LR = sess.run(LR_out)  # (1,10,10,2)
+
+        self.LR_data_shape = data_LR.shape[1:]  # (10,10,2)
 
     def set_mu_sig(self, data_path, batch_size=1):
         '''
-            Compute mean (mu) and standard deviation (sigma) for each data channel
-            inputs:
-                data_path - (string) path to the tfrecord for the training data
-                batch_size - number of samples to grab each interation
+        Compute mean (mu) and standard deviation (sigma) for each data channel
+        inputs:
+            data_path - (string) path to the tfrecord for the training data
+            batch_size - number of samples to grab each interation
 
-            outputs:
-                sets self.mu_sig
+        outputs:
+            sets self.mu_sig
         '''
         print('Loading data ...', end=' ')
 
@@ -154,16 +156,15 @@ class loadPhIRE:
 
         print('Done.')
 
-
     def load(self, data_path, saveName, batch_size=100, saveLow=True):
         tf.reset_default_graph()
 
         if self.mu_sig is None:
             self.set_mu_sig(data_path, batch_size)
-        
+
         # self.set_LR_data_shape(data_path)
         # h, w, C = self.LR_data_shape # 10, 10, 2
-        
+
         print('Building data pipeline ...', end=' ')
         ds = tf.data.TFRecordDataset(data_path)
         ds = (
@@ -193,31 +194,27 @@ if __name__ == '__main__':
     # (5, 10, 10, 2) --> (5, 100, 100, 2) --> (5, 500, 500, 2)
 
     data_path = 'example_data/wind_LR-MR.tfrecord'
-    saveName='wind_lr_5x10x10x2.npy'
-    mu_sig=[[0.7684, -0.4575], [4.9491, 5.8441]]
+    saveName = 'wind_lr_5x10x10x2.npy'
+    mu_sig = [[0.7684, -0.4575], [4.9491, 5.8441]]
     load = loadPhIRE(mu_sig)
     load.load(data_path, batch_size=16, saveName=saveName, saveLow=True)
 
     # data_path = 'example_data/wind_MR-HR.tfrecord'
-    saveName='wind_hr_5x500x500x2.npy'
-    mu_sig=[[0.7684, -0.4575], [5.02455, 5.9017]]
+    saveName = 'wind_hr_5x500x500x2.npy'
+    mu_sig = [[0.7684, -0.4575], [5.02455, 5.9017]]
     load = loadPhIRE(mu_sig)
     load.load(data_path, batch_size=16, saveName=saveName, saveLow=False)
-
 
     # also only 5 images for solar
     # (5, 20, 20, 2) --> (5, 100, 100, 2) --> (5, 500, 500, 2)
     data_path = 'example_data/solar_LR-MR.tfrecord'
-    saveName='solar_lr_5x20x20x2.npy'
-    mu_sig=[[344.3262, 113.7444], [370.8409, 111.1224]]
+    saveName = 'solar_lr_5x20x20x2.npy'
+    mu_sig = [[344.3262, 113.7444], [370.8409, 111.1224]]
     load = loadPhIRE(mu_sig)
     load.load(data_path, batch_size=16, saveName=saveName, saveLow=True)
 
     # data_path = 'example_data/solar_MR-HR.tfrecord'
-    saveName='solar_hr_5x500x500x2.npy'
+    saveName = 'solar_hr_5x500x500x2.npy'
     mu_sig = [[344.3262, 113.7444], [386.9283, 117.9627]]
     load = loadPhIRE(mu_sig)
     load.load(data_path, batch_size=16, saveName=saveName, saveLow=False)
-
-
-    
