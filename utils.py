@@ -1,6 +1,7 @@
 import matplotlib.pyplot as plt
 import numpy as np
 import tensorflow as tf
+from tqdm import tqdm
 
 
 def conv_layer_2d(x, filter_shape, stride, trainable=True):
@@ -180,7 +181,7 @@ def downscale_image(x, K):
     return ds_out
 
 
-def generate_TFRecords(filename, data, mode='test', K=None):
+def generate_TFRecords(filename, data_HR, data_LR, mode='test'):
     '''
     Generate TFRecords files for model training or testing
 
@@ -195,14 +196,11 @@ def generate_TFRecords(filename, data, mode='test', K=None):
     outputs:
         No output, but .tfrecord file written to filename
     '''
-    if mode == 'train':
-        assert K is not None, 'In training mode, downscaling factor K must be specified'
-        data_LR = downscale_image(data, K)
 
     with tf.python_io.TFRecordWriter(filename) as writer:
-        for j in range(data.shape[0]):
+        for j in tqdm(range(data_HR.shape[0])):
             if mode == 'train':
-                h_HR, w_HR, c = data[j, ...].shape
+                h_HR, w_HR, c = data_HR[j, ...].shape
                 h_LR, w_LR, c = data_LR[j, ...].shape
                 features = tf.train.Features(
                     feature={
@@ -210,18 +208,18 @@ def generate_TFRecords(filename, data, mode='test', K=None):
                         'data_LR': _bytes_feature(data_LR[j, ...].tostring()),
                         'h_LR': _int64_feature(h_LR),
                         'w_LR': _int64_feature(w_LR),
-                        'data_HR': _bytes_feature(data[j, ...].tostring()),
+                        'data_HR': _bytes_feature(data_HR[j, ...].tostring()),
                         'h_HR': _int64_feature(h_HR),
                         'w_HR': _int64_feature(w_HR),
                         'c': _int64_feature(c),
                     }
                 )
             elif mode == 'test':
-                h_LR, w_LR, c = data[j, ...].shape
+                h_LR, w_LR, c = data_LR[j, ...].shape
                 features = tf.train.Features(
                     feature={
                         'index': _int64_feature(j),
-                        'data_LR': _bytes_feature(data[j, ...].tostring()),
+                        'data_LR': _bytes_feature(data_LR[j, ...].tostring()),
                         'h_LR': _int64_feature(h_LR),
                         'w_LR': _int64_feature(w_LR),
                         'c': _int64_feature(c),
