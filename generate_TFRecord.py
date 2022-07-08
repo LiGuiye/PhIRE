@@ -58,7 +58,7 @@ class TFRecordExporter:
             print('%-40s\r' % '', end='', flush=True)
             print('Added %d images.' % self.cur_images)
 
-    def add_image(self, data_HR, data_LR, index, label):
+    def add_image(self, data_HR, data_LR, index, label, mode="train"):
         if self.tfr_writer is None:
             tfr_opt = tf.io.TFRecordOptions(compression_type="")
             tfr_file = self.tfr_prefix + '.tfrecord'
@@ -70,22 +70,33 @@ class TFRecordExporter:
                 end='',
                 flush=True,
             )
-
-        h_HR, w_HR, c = data_HR.shape
-        h_LR, w_LR, c = data_LR.shape
-        features = tf.train.Features(
-            feature={
-                'index': _int64_feature(index),
-                'data_LR': _bytes_feature(data_LR.tostring()),
-                'h_LR': _int64_feature(h_LR),
-                'w_LR': _int64_feature(w_LR),
-                'data_HR': _bytes_feature(data_HR.tostring()),
-                'h_HR': _int64_feature(h_HR),
-                'w_HR': _int64_feature(w_HR),
-                'c': _int64_feature(c),
-                'label': _bytes_feature(label),
-            }
-        )
+        if mode == "train":
+            h_HR, w_HR, c = data_HR.shape
+            h_LR, w_LR, c = data_LR.shape
+            features = tf.train.Features(
+                feature={
+                    'index': _int64_feature(index),
+                    'data_LR': _bytes_feature(data_LR.tostring()),
+                    'h_LR': _int64_feature(h_LR),
+                    'w_LR': _int64_feature(w_LR),
+                    'data_HR': _bytes_feature(data_HR.tostring()),
+                    'h_HR': _int64_feature(h_HR),
+                    'w_HR': _int64_feature(w_HR),
+                    'c': _int64_feature(c),
+                    'label': _bytes_feature(label),
+                }
+            )
+        elif mode == "test":
+            h_LR, w_LR, c = data_LR.shape
+            features = tf.train.Features(
+                feature={
+                    'index': _int64_feature(index),
+                    'data_LR': _bytes_feature(data_LR.tostring()),
+                    'h_LR': _int64_feature(h_LR),
+                    'w_LR': _int64_feature(w_LR),
+                    'c': _int64_feature(c),
+                }
+            )
         example = tf.train.Example(features=features)
         self.tfr_writer.write(example.SerializeToString())
         self.cur_images += 1
@@ -97,7 +108,7 @@ class TFRecordExporter:
         self.close()
 
 
-def wind_dataset(years=[2007, 2008], lr=10, mr=100, hr=500):
+def wind_dataset(years=[2007, 2008], lr=10, mr=100, hr=500, mode="train"):
     data_list = []
     for year in years:
         data_list += sorted(
@@ -138,7 +149,7 @@ def wind_dataset(years=[2007, 2008], lr=10, mr=100, hr=500):
     # --------------------------------
     # MR-HR
     tfrecord_path = 'example_data/'
-    tfrecord_name = 'wind_' + ','.join([str(e) for e in years]) + '_MR-HR'
+    tfrecord_name = 'wind_' + ','.join([str(e) for e in years]) + '_MR-HR-' + mode
     with TFRecordExporter(tfrecord_path, len(data_list), tfrecord_name) as tfr:
         for idx, image in enumerate(tqdm(data_list)):
             img_hr = np.load(image)
@@ -146,17 +157,16 @@ def wind_dataset(years=[2007, 2008], lr=10, mr=100, hr=500):
                 img_hr = tool.downscale_image(img_hr, img_hr.shape[0] // hr).squeeze()
 
             img_mr = tool.downscale_image(img_hr, hr // mr).squeeze()
-            # img_lr = tool.downscale_image(img_hr, hr // lr).squeeze()
 
             label = tf.compat.as_bytes(
                 data_list[idx].split('/')[-1][:-4], encoding='utf-8'
             )
-            tfr.add_image(img_hr, img_mr, idx, label)
+            tfr.add_image(img_hr, img_mr, idx, label, mode=mode)
 
     # --------------------------------
     # LR-MR
     tfrecord_path = 'example_data/'
-    tfrecord_name = 'wind_' + ','.join([str(e) for e in years]) + '_LR-MR'
+    tfrecord_name = 'wind_' + ','.join([str(e) for e in years]) + '_LR-MR-' + mode
     with TFRecordExporter(tfrecord_path, len(data_list), tfrecord_name) as tfr:
         for idx, image in enumerate(tqdm(data_list)):
             img_hr = np.load(image)
@@ -169,8 +179,9 @@ def wind_dataset(years=[2007, 2008], lr=10, mr=100, hr=500):
             label = tf.compat.as_bytes(
                 data_list[idx].split('/')[-1][:-4], encoding='utf-8'
             )
-            tfr.add_image(img_mr, img_lr, idx, label)
+            tfr.add_image(img_mr, img_lr, idx, label, mode=mode)
 
 
 if __name__ == '__main__':
-    wind_dataset()
+    # wind_dataset(years=[2007, 2008], lr=10, mr=100, hr=500, mode="train")
+    wind_dataset(years=[2010], lr=10, mr=100, hr=500, mode="test")
