@@ -195,9 +195,10 @@ if __name__ == '__main__':
 
     data_path = 'example_data/wind_LR-MR.tfrecord'
     saveName = 'wind_lr_5x10x10x2.npy'
-    mu_sig = [[0.7684, -0.4575], [4.9491, 5.8441]]
-    load = loadPhIRE(mu_sig)
-    load.load(data_path, batch_size=16, saveName=saveName, saveLow=True)
+    # mu_sig=[[0.7684, -0.4575], [4.9491, 5.8441]]
+    # load = loadPhIRE(mu_sig)
+    load = loadPhIRE()
+    load.load(data_path, batch_size=1, saveName=saveName, saveLow=True)
 
     # data_path = 'example_data/wind_MR-HR.tfrecord'
     saveName = 'wind_hr_5x500x500x2.npy'
