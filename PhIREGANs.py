@@ -52,7 +52,7 @@ class PhIREGANs:
 
     def set_data_out_path(self, in_data_path):
         self.data_out_path = in_data_path
-    
+
     def reset_run_id(self):
         self.run_id        = '-'.join([self.data_type, strftime('%Y%m%d-%H%M%S')])
         self.model_name    = '/'.join(['models', self.run_id])
@@ -152,7 +152,7 @@ class PhIREGANs:
                         os.makedirs(model_dir)
                     saved_model = '/'.join([model_dir, 'cnn'])
                     g_saver.save(sess, saved_model)
-
+                    print("Model saved: ", saved_model)
                 epoch_loss = epoch_loss/N
 
                 print('Epoch generator training loss=%.5f' %(epoch_loss))
@@ -163,6 +163,7 @@ class PhIREGANs:
                 os.makedirs(self.model_name)
             saved_model = '/'.join([model_dir, 'cnn'])
             g_saver.save(sess, saved_model)
+            print("Model saved: ", saved_model)
 
         print('Done.')
 
@@ -420,7 +421,8 @@ class PhIREGANs:
                  'data_HR': tf.FixedLenFeature([], tf.string),
                     'h_HR': tf.FixedLenFeature([], tf.int64),
                     'w_HR': tf.FixedLenFeature([], tf.int64),
-                       'c': tf.FixedLenFeature([], tf.int64)}
+                       'c': tf.FixedLenFeature([], tf.int64),
+                   'label': tf.FixedLenFeature([], tf.string)}
         example = tf.parse_single_example(serialized_example, feature)
 
         idx = example['index']
@@ -515,7 +517,7 @@ class PhIREGANs:
                 pass
 
         self.mu_sig = [mu, np.sqrt(sigma)]
-
+        print("mu_sig: ", self.mu_sig)
         print('Done.')
 
     def set_LR_data_shape(self, data_path):
