@@ -1,5 +1,5 @@
 from PhIREGANs import *
-
+import time
 
 def train_Wind(batch_size = 8, epoch = 10):
     # WIND Total Scale: 50X
