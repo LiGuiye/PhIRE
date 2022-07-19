@@ -110,9 +110,7 @@ def generate_test_dataset(data_type, lr=10, hr=500):
         data_lr = utils.downscale_image(data_real, hr // lr)
         if data_out_lr is None:
             data_out_lr = data_lr
-            data_out_real = data_real[
-                np.newaxis,
-            ]
+            data_out_real = data_real[np.newaxis, :, :, :]
         else:
             data_out_lr = np.concatenate((data_out_lr, data_lr), axis=0)
             data_out_real = np.concatenate(
@@ -130,25 +128,31 @@ def generate_test_dataset(data_type, lr=10, hr=500):
     )
 
 
-def generate_test_samples_wind():
+def generate_test_samples(
+    data_type, model_name='wind_07-10_bs4_epoch10', r_lr_mr=[2, 5], r_mr_hr=[5]
+):
     phiregans = PhIREGANs(data_type=data_type)
     # -------------------------------------------------------------
-    # LR-MR (10, 10, 2) --> (100, 100, 2)
-    r = [2, 5]
-    data_path = 'example_data/wind_test50_lr.tfrecord'
-    model_path = 'models/wind_07-10_bs4_epoch10/wind_lr-mr/trained_gan/gan'
+    # LR-MR wind (10, 10, 2) solar (20,20,2)--> (100, 100, 2)
+    data_path = 'example_data/' + data_type + '_test50_lr.tfrecord'
+    model_path = 'models/' + model_name + '/' + data_type + '_lr-mr/trained_gan/gan'
     phiregans.mu_sig = calc_mu_sig_for_test(data_path)
 
     data_out_path = phiregans.test(
-        r=r, data_path=data_path, model_path=model_path, plot_data=False,
+        r=r_lr_mr,
+        data_path=data_path,
+        model_path=model_path,
+        plot_data=False,
+        batch_size=8,
     )
     lr_mr_result = np.load(data_out_path + '/dataSR.npy')
     os.rename(
-        data_out_path + '/dataSR.npy', data_out_path + '/wind_test50_result_mr.npy'
+        data_out_path + '/dataSR.npy',
+        data_out_path + '/' + data_type + '_test50_result_mr.npy',
     )
 
     utils.generate_TFRecords(
-        data_out_path + '/wind_test50_result_mr.tfrecord',
+        data_out_path + '/' + data_type + '_test50_result_mr.tfrecord',
         data_HR=lr_mr_result,
         data_LR=lr_mr_result,
         mode='test',
@@ -156,14 +160,21 @@ def generate_test_samples_wind():
 
     # -------------------------------------------------------------
     # MR-HR (100, 100, 2) --> (500, 500, 2)
-    r = [5]
-    data_path = data_out_path + '/wind_test50_result_mr.tfrecord'
-    model_path = 'models/wind_07-10_bs4_epoch10/wind_mr-hr/trained_gan/gan'
+    data_path = data_out_path + '/' + data_type + '_test50_result_mr.tfrecord'
+    model_path = 'models/' + model_name + '/' + data_type + '_mr-hr/trained_gan/gan'
     phiregans.mu_sig = calc_mu_sig_for_test(data_path)
-    phiregans.test(r=r, data_path=data_path, model_path=model_path, plot_data=False)
-    os.rename(
-        data_out_path + '/dataSR.npy', data_out_path + '/wind_test50_result_hr.npy'
+    phiregans.test(
+        r=r_mr_hr,
+        data_path=data_path,
+        model_path=model_path,
+        plot_data=False,
+        batch_size=8,
     )
+    os.rename(
+        data_out_path + '/dataSR.npy',
+        data_out_path + '/' + data_type + '_test50_result_hr.npy',
+    )
+    return data_out_path + '/' + data_type + '_test50_result_hr.npy'
 
 
 def images_to_grid(images):
@@ -203,33 +214,29 @@ def to_png(x):
 
 
 def stretch_min_max_grids(image, min_value=-1.0, max_value=1.0):
-    data_new = copy.deepcopy(image)
-    data_new = np.asarray(data_new)
-    n, h, w, c = data_new.shape
+    image = np.asarray(image)
+    n, h, w, c = image.shape
     for i in range(n):
-        pixel_min = data_new[i, :, :, :].min()
-        pixel_max = data_new[i, :, :, :].max()
-        data_new[i, :, :, :] = (
-            ((image - pixel_min) / max((pixel_max - pixel_min), 1e-5))
-            * (max_value - min_value)
-            + min_value,
-            pixel_min,
-            pixel_max,
-        )
-    return data_new
+        pixel_min = image[i, :, :, :].min()
+        pixel_max = image[i, :, :, :].max()
+        image[i, :, :, :] = (
+            (image[i, :, :, :] - pixel_min) / max((pixel_max - pixel_min), 1e-5)
+        ) * (max_value - min_value) + min_value
+    return image
 
 
-def plot_test_samples_wind(fake_path, batch_size=4):
+def plot_test_samples(fake_path, data_type, batch_size=4):
     """
     plot first 4 images in the test sample
     """
-    real = np.load('example_data/wind_test50_real.npy')
-    low = np.load('example_data/wind_test50_lr.npy')
+    real = np.load('example_data/' + data_type + '_test50_real.npy')
+    low = np.load('example_data/' + data_type + '_test50_lr.npy')
     low = tf.image.resize_nearest_neighbor(low, (500, 500))
     sess = tf.Session()
     low = sess.run(low)
     fake = np.load(fake_path)
 
+    # stretch to [-1, 1] for `to_png` to generate images at [0,255] data range for better visual effects
     real = stretch_min_max_grids(real)
     low = stretch_min_max_grids(low)
     fake = stretch_min_max_grids(fake)
@@ -253,12 +260,20 @@ def plot_test_samples_wind(fake_path, batch_size=4):
 
 if __name__ == '__main__':
     # WIND Total Scale: 50X
-    data_type = 'wind'
-    # generate_test_dataset(data_type)
+    # ----------------------------------
+    # data_type = 'wind'
+    # generate_test_dataset(data_type, lr=10, hr=500)
+    # hr_test_samples = generate_test_samples(
+    #     data_type, model_name='wind_07-10_bs4_epoch10', r_lr_mr=[2, 5]
+    # )
+    # plot_test_samples(fake_path=hr_test_samples, data_type=data_type)
 
-    # generate_test_samples_wind()
-
-    plot_test_samples_wind(
-        fake_path='data_out/wind-20220718-124921/wind_test50_result_hr.npy'
+    # WIND Total Scale: 25X
+    # ----------------------------------
+    data_type = 'solar'
+    generate_test_dataset(data_type, lr=20, hr=500)
+    hr_test_samples = generate_test_samples(
+        data_type, model_name='solar_09-13_bs8_epoch10', r_lr_mr=[5]
     )
+    plot_test_samples(fake_path=hr_test_samples, data_type=data_type)
 
