@@ -94,38 +94,48 @@ def calc_mu_sig_for_test(data_path, batch_size=1):
 
 
 def generate_test_dataset(data_type, lr=10, hr=500):
-    np.random.seed(666)
-    sample_indices = np.random.choice(range(1, 209), 50, replace=False).tolist()
-    print(sample_indices)
-    if data_type == 'solar':
-        dataset_path = '/home/guiyli/Documents/DataSet/NSRDB/500X500/2013/grid1/dni_dhi'
-    elif data_type == 'wind':
-        dataset_path = '/home/guiyli/Documents/DataSet/Wind/2010/u_v'
-    images_path = glob(dataset_path + '/*.npy')
+    real_npy_path = 'example_data/' + data_type + '_test50_real.npy'
+    lr_npy_path = 'example_data/' + data_type + '_test50_lr.npy'
+    lr_tfrecord_path = 'example_data/' + data_type + '_test50_lr.tfrecord'
 
-    data_out_lr = None
-    data_out_real = None
-    for i in sample_indices:
-        data_real = np.load(images_path[i]).astype(np.float64)
-        data_lr = utils.downscale_image(data_real, hr // lr)
-        if data_out_lr is None:
-            data_out_lr = data_lr
-            data_out_real = data_real[np.newaxis, :, :, :]
-        else:
-            data_out_lr = np.concatenate((data_out_lr, data_lr), axis=0)
-            data_out_real = np.concatenate(
-                (data_out_real, data_real[np.newaxis,]), axis=0
+    if not (
+        os.path.exists(real_npy_path)
+        or os.path.exists(lr_npy_path)
+        or os.path.exists(lr_tfrecord_path)
+    ):
+        np.random.seed(666)
+        sample_indices = np.random.choice(range(1, 209), 50, replace=False).tolist()
+        print(sample_indices)
+        if data_type == 'solar':
+            dataset_path = (
+                '/home/guiyli/Documents/DataSet/NSRDB/500X500/2013/grid1/dni_dhi'
             )
+        elif data_type == 'wind':
+            dataset_path = '/home/guiyli/Documents/DataSet/Wind/2010/u_v'
+        images_path = glob(dataset_path + '/*.npy')
 
-    np.save('example_data/' + data_type + '_test50_real.npy', data_out_real)
-    np.save('example_data/' + data_type + '_test50_lr.npy', data_out_lr)
+        data_out_lr = None
+        data_out_real = None
+        for i in sample_indices:
+            data_real = np.load(images_path[i]).astype(np.float64)
+            data_lr = utils.downscale_image(data_real, hr // lr)
+            if data_out_lr is None:
+                data_out_lr = data_lr
+                data_out_real = data_real[np.newaxis, :, :, :]
+            else:
+                data_out_lr = np.concatenate((data_out_lr, data_lr), axis=0)
+                data_out_real = np.concatenate(
+                    (data_out_real, data_real[np.newaxis,]), axis=0
+                )
 
-    utils.generate_TFRecords(
-        'example_data/' + data_type + '_test50_lr.tfrecord',
-        data_HR=data_out_lr,
-        data_LR=data_out_lr,
-        mode='test',
-    )
+        np.save(real_npy_path, data_out_real)
+        np.save(lr_npy_path, data_out_lr)
+
+        utils.generate_TFRecords(
+            lr_tfrecord_path, data_HR=data_out_lr, data_LR=data_out_lr, mode='test',
+        )
+    else:
+        print(data_type, "test dataset already exist")
 
 
 def generate_test_samples(
@@ -261,19 +271,21 @@ def plot_test_samples(fake_path, data_type, batch_size=4):
 if __name__ == '__main__':
     # WIND Total Scale: 50X
     # ----------------------------------
-    # data_type = 'wind'
-    # generate_test_dataset(data_type, lr=10, hr=500)
-    # hr_test_samples = generate_test_samples(
-    #     data_type, model_name='wind_07-10_bs4_epoch10', r_lr_mr=[2, 5]
-    # )
-    # plot_test_samples(fake_path=hr_test_samples, data_type=data_type)
+    data_type = 'wind'
+    model_name = 'wind_07-10_bs8_epoch10'
+    generate_test_dataset(data_type, lr=10, hr=500)
+    hr_test_samples = generate_test_samples(
+        data_type, model_name=model_name, r_lr_mr=[2, 5]
+    )
+    plot_test_samples(fake_path=hr_test_samples, data_type=data_type)
 
     # WIND Total Scale: 25X
     # ----------------------------------
-    data_type = 'solar'
-    generate_test_dataset(data_type, lr=20, hr=500)
-    hr_test_samples = generate_test_samples(
-        data_type, model_name='solar_09-13_bs8_epoch10', r_lr_mr=[5]
-    )
-    plot_test_samples(fake_path=hr_test_samples, data_type=data_type)
+    # data_type = 'solar'
+    # model_name = 'solar_09-13_bs8_epoch10'
+    # generate_test_dataset(data_type, lr=20, hr=500)
+    # hr_test_samples = generate_test_samples(
+    #     data_type, model_name=model_name, r_lr_mr=[5]
+    # )
+    # plot_test_samples(fake_path=hr_test_samples, data_type=data_type)
 
