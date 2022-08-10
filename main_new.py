@@ -45,14 +45,17 @@ if __name__ == '__main__':
     start_time = time.time()
     # -----------------------------------------------
 
-    model_dir = train(
-        data_type='solar', dataset_name='solar_2009,2010,2011', batch_size=8, epoch=10
-    )
+    # model_dir = train(
+    #     data_type='solar', dataset_name='solar_2009,2010,2011', batch_size=8, epoch=10
+    # )
+
+    # model_dir = train(
+    #     data_type='wind', dataset_name='wind_2007,2008', batch_size=8, epoch=10
+    # )
 
     model_dir = train(
-        data_type='wind', dataset_name='wind_2007,2008', batch_size=8, epoch=10
+        data_type='solar', dataset_name='solar_2009', batch_size=8, epoch=10
     )
-
     # -----------------------------------------------
     finish_time = time.time() - start_time
     total_time_print = 'Training Finished. Took {:.4f} minutes or {:.4f} hours to complete.'.format(
