@@ -190,11 +190,6 @@ def solar_dataset(years=[2009, 2010, 2011], lr=20, mr=100, hr=500, mode="train")
     # MR-HR (100, 100, 2) --> (500, 500, 2)
     data_list = []
     for year in years:
-        # data_list += glob(
-        #     '/home/guiyli/Documents/DataSet/NSRDB/500X500/'
-        #     + str(year)
-        #     + '/grid1/dni_dhi/*.npy'
-        # )
         data_list += glob(
             '/lustre/scratch/guiyli/Dataset_NSRDB/npyFiles/dni_dhi/'
             + str(year)
