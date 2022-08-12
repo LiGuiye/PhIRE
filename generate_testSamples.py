@@ -75,12 +75,8 @@ def calc_mu_sig_for_test(data_path, batch_size=1):
                 mu_batch = np.mean(data_LR, axis=(0, 1, 2))
                 sigma_batch = np.var(data_LR, axis=(0, 1, 2))
 
-                sigma = (
-                    (N / N_new) * sigma
-                    + (N_batch / N_new) * sigma_batch
-                    + (N * N_batch / N_new ** 2) * (mu - mu_batch) ** 2
-                )
-                mu = (N / N_new) * mu + (N_batch / N_new) * mu_batch
+                sigma = (N/N_new)*sigma + (N_batch/N_new)*sigma_batch + (N*N_batch/N_new**2)*(mu - mu_batch)**2
+                mu = (N/N_new)*mu + (N_batch/N_new)*mu_batch
 
                 N = N_new
 
@@ -138,6 +134,48 @@ def generate_test_dataset(data_type, lr=10, hr=500):
         print(data_type, "test dataset already exist")
 
 
+def generate_test_dataset_all(dataset_name="solar_2009", lr=10, hr=500):
+    real_npy_path = 'example_data/' + dataset_name + '_testAll_real.npy'
+    lr_npy_path = 'example_data/' + dataset_name + '_testAll_lr.npy'
+    lr_tfrecord_path = 'example_data/' + dataset_name + '_testAll_lr.tfrecord'
+
+    if not (
+        os.path.exists(real_npy_path)
+        or os.path.exists(lr_npy_path)
+        or os.path.exists(lr_tfrecord_path)
+    ):
+
+        if dataset_name == 'solar_2009':
+            dataset_path = '/home/guiyli/Documents/DataSet/NSRDB/500X500/2009/grid1/dni_dhi/test'
+        images_path = glob(dataset_path + '/*.npy')
+
+        data_out_lr = None
+        data_out_real = None
+        for i in range(len(images_path)):
+            data_real = np.load(images_path[i]).astype(np.float64)
+            # average pool, but the output range sometime even exceed the original data range??
+            data_lr = utils.downscale_image(data_real, hr // lr)
+            if data_out_lr is None:
+                data_out_lr = data_lr
+                data_out_real = data_real[np.newaxis, :, :, :]
+            else:
+                data_out_lr = np.concatenate((data_out_lr, data_lr), axis=0)
+                data_out_real = np.concatenate(
+                    (data_out_real, data_real[np.newaxis,]), axis=0
+                )
+        # original data range: 
+        # real: 0-1107, 208*500*500*2
+        # lr: 0-1159.918400000002, 208*20*20*2
+        np.save(real_npy_path, data_out_real)
+        np.save(lr_npy_path, data_out_lr)
+
+        utils.generate_TFRecords(
+            lr_tfrecord_path, data_HR=data_out_lr, data_LR=data_out_lr, mode='test',
+        )
+    else:
+        print(data_type, "test dataset already exist")
+
+
 def generate_test_samples(
     data_type, model_name='wind_07-10_bs4_epoch10', r_lr_mr=[2, 5], r_mr_hr=[5]
 ):
@@ -185,6 +223,55 @@ def generate_test_samples(
         data_out_path + '/' + data_type + '_test50_result_hr.npy',
     )
     return data_out_path + '/' + data_type + '_test50_result_hr.npy'
+
+
+def generate_test_samples_all(
+    data_type="solar", dataset_name = "solar_2009", model_name='wind_07-10_bs4_epoch10', r_lr_mr=[2, 5], r_mr_hr=[5]
+):
+    phiregans = PhIREGANs(data_type=data_type)
+    # -------------------------------------------------------------
+    # LR-MR wind (10, 10, 2) solar (20,20,2)--> (100, 100, 2)
+    data_path = 'example_data/' + dataset_name + '_testAll_lr.tfrecord'
+    model_path = 'models/' + model_name + '/' + data_type + '_lr-mr/trained_gan/gan'
+    phiregans.mu_sig = calc_mu_sig_for_test(data_path)
+    # testAll_lr [array([487.29226592, 487.29226592]), array([337.80788815, 337.80788815])]
+    data_out_path = phiregans.test(
+        r=r_lr_mr,
+        data_path=data_path,
+        model_path=model_path,
+        plot_data=False,
+        batch_size=8,
+    )
+    lr_mr_result = np.load(data_out_path + '/dataSR.npy') # original range [-314.7676617413293, 1269.250537298715]
+    os.rename(
+        data_out_path + '/dataSR.npy',
+        data_out_path + '/' + data_type + '_testAll_result_mr.npy',
+    )
+
+    utils.generate_TFRecords(
+        data_out_path + '/' + data_type + '_testAll_result_mr.tfrecord',
+        data_HR=lr_mr_result,
+        data_LR=lr_mr_result,
+        mode='test',
+    )
+
+    # -------------------------------------------------------------
+    # MR-HR (100, 100, 2) --> (500, 500, 2)
+    data_path = data_out_path + '/' + data_type + '_testAll_result_mr.tfrecord'
+    model_path = 'models/' + model_name + '/' + data_type + '_mr-hr/trained_gan/gan'
+    phiregans.mu_sig = calc_mu_sig_for_test(data_path) # [array([490.55524943, 483.99321082]), array([343.87597369, 344.07098301])]
+    phiregans.test(
+        r=r_mr_hr,
+        data_path=data_path,
+        model_path=model_path,
+        plot_data=False,
+        batch_size=8,
+    ) # range [-206.3111427851751, 834.0969354017284]
+    os.rename(
+        data_out_path + '/dataSR.npy',
+        data_out_path + '/' + data_type + '_testAll_result_hr.npy',
+    )
+    return data_out_path + '/' + data_type + '_testAll_result_hr.npy'
 
 
 def images_to_grid(images):
@@ -271,15 +358,15 @@ def plot_test_samples(fake_path, data_type, batch_size=4):
 if __name__ == '__main__':
     # WIND Total Scale: 50X
     # ----------------------------------
-    data_type = 'wind'
-    model_name = 'wind_07-10_bs8_epoch10'
-    generate_test_dataset(data_type, lr=10, hr=500)
-    hr_test_samples = generate_test_samples(
-        data_type, model_name=model_name, r_lr_mr=[2, 5]
-    )
-    plot_test_samples(fake_path=hr_test_samples, data_type=data_type)
+    # data_type = 'wind'
+    # model_name = 'wind_07-10_bs8_epoch10'
+    # generate_test_dataset(data_type, lr=10, hr=500)
+    # hr_test_samples = generate_test_samples(
+    #     data_type, model_name=model_name, r_lr_mr=[2, 5]
+    # )
+    # plot_test_samples(fake_path=hr_test_samples, data_type=data_type)
 
-    # WIND Total Scale: 25X
+    # Solar Total Scale: 25X
     # ----------------------------------
     # data_type = 'solar'
     # model_name = 'solar_09-13_bs8_epoch10'
@@ -287,5 +374,16 @@ if __name__ == '__main__':
     # hr_test_samples = generate_test_samples(
     #     data_type, model_name=model_name, r_lr_mr=[5]
     # )
+    # plot_test_samples(fake_path=hr_test_samples, data_type=data_type)
+
+    # Solar Total Scale: 25X
+    # ----------------------------------
+    data_type = 'solar'
+    dataset_name  ="solar_2009"
+    model_name = 'solar_2009_bs8_epoch10'
+    generate_test_dataset_all(dataset_name, lr=20, hr=500)
+    hr_test_samples = generate_test_samples_all(
+        data_type=data_type, dataset_name=dataset_name,model_name=model_name, r_lr_mr=[5]
+    )
     # plot_test_samples(fake_path=hr_test_samples, data_type=data_type)
 
