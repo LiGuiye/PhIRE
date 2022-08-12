@@ -378,6 +378,7 @@ class PhIREGANs:
 
                     batch_SR = sess.run(model.x_SR, feed_dict=feed_dict)
 
+                    # stretch to original range
                     batch_LR = self.mu_sig[1]*batch_LR + self.mu_sig[0]
                     batch_SR = self.mu_sig[1]*batch_SR + self.mu_sig[0]
                     if plot_data:
@@ -388,8 +389,10 @@ class PhIREGANs:
 
                     if data_out is None:
                         data_out = batch_SR
+                        # data_lr = batch_LR
                     else:
                         data_out = np.concatenate((data_out, batch_SR), axis=0)
+                        # data_lr = np.concatenate((data_lr, batch_LR), axis=0)
 
             except tf.errors.OutOfRangeError:
                 pass
