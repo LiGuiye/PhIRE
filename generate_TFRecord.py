@@ -190,16 +190,21 @@ def solar_dataset(years=[2009, 2010, 2011], lr=20, mr=100, hr=500, mode="train")
     # MR-HR (100, 100, 2) --> (500, 500, 2)
     data_list = []
     for year in years:
+        # data_list += glob(
+        #     '/home/guiyli/Documents/DataSet/NSRDB/500X500/'
+        #     + str(year)
+        #     + '/grid1/dni_dhi/*.npy'
+        # )
         data_list += glob(
-            '/home/guiyli/Documents/DataSet/NSRDB/500X500/'
+            '/lustre/scratch/guiyli/Dataset_NSRDB/npyFiles/dni_dhi/'
             + str(year)
-            + '/grid1/dni_dhi/*.npy'
+            + '/*.npy'
         )
 
+    tfrecord_path = '/lustre/scratch/guiyli/Dataset_NSRDB/PhIRE/'
     # --------------------------------
     # MR-HR
     if mode == "train":  # there is only LR data in test dataset
-        tfrecord_path = 'example_data/'
         tfrecord_name = 'solar_' + ','.join([str(e) for e in years]) + '_MR-HR-' + mode
         with TFRecordExporter(tfrecord_path, len(data_list), tfrecord_name) as tfr:
             for idx, image in enumerate(tqdm(data_list)):
@@ -218,7 +223,6 @@ def solar_dataset(years=[2009, 2010, 2011], lr=20, mr=100, hr=500, mode="train")
 
     # --------------------------------
     # LR-MR
-    tfrecord_path = 'example_data/'
     tfrecord_name = 'solar_' + ','.join([str(e) for e in years]) + '_LR-MR-' + mode
     with TFRecordExporter(tfrecord_path, len(data_list), tfrecord_name) as tfr:
         for idx, image in enumerate(tqdm(data_list)):
@@ -280,9 +284,9 @@ def solar_2009(lr=20, mr=100, hr=500, mode="train"):
 if __name__ == '__main__':
     # wind_dataset(years=[2007, 2008], lr=10, mr=100, hr=500, mode="train")
     # wind_dataset(years=[2010], lr=10, mr=100, hr=500, mode="test")
-    # solar_dataset(years=[2009, 2010, 2011], lr=20, mr=100, hr=500, mode="train")
-    # solar_dataset(years=[2013], lr=20, mr=100, hr=500, mode="test")
+    solar_dataset(years=[2007, 2008, 2009, 2010, 2011, 2012], lr=20, mr=100, hr=500, mode="train")
+    solar_dataset(years=[2013], lr=20, mr=100, hr=500, mode="test")
 
-    solar_2009(lr=20, mr=100, hr=500, mode="train")
-    solar_2009(lr=20, mr=100, hr=500, mode="test")
+    # solar_2009(lr=20, mr=100, hr=500, mode="train")
+    # solar_2009(lr=20, mr=100, hr=500, mode="test")
 
