@@ -155,11 +155,14 @@ def wind_dataset(years=[2007, 2008], lr=10, mr=100, hr=500, mode="train"):
             for idx, image in enumerate(tqdm(data_list)):
                 img_hr = np.load(image).astype('float64')
                 if not img_hr.shape[0] == hr:
-                    img_hr = tool.downscale_image(
-                        img_hr, img_hr.shape[0] // hr
-                    ).squeeze()
+                    # img_hr = tool.downscale_image(
+                    #     img_hr, img_hr.shape[0] // hr
+                    # ).squeeze()
+                    with tf.Session() as sess:
+                        img_hr = sess.run(tf.image.resize_nearest_neighbor(img_hr[np.newaxis,:] if len(img_hr.shape)==3 else img_hr, [hr,hr])).squeeze()
 
                 img_mr = tool.downscale_image(img_hr, hr // mr).squeeze()
+                # img_mr = sess.run(tf.image.resize_nearest_neighbor(img_hr, [mr,mr]))
 
                 label = tf.compat.as_bytes(
                     data_list[idx].split('/')[-1][:-4], encoding='utf-8'
@@ -174,10 +177,14 @@ def wind_dataset(years=[2007, 2008], lr=10, mr=100, hr=500, mode="train"):
         for idx, image in enumerate(tqdm(data_list)):
             img_hr = np.load(image).astype('float64')
             if not img_hr.shape[0] == hr:
-                img_hr = tool.downscale_image(img_hr, img_hr.shape[0] // hr).squeeze()
+                # img_hr = tool.downscale_image(img_hr, img_hr.shape[0] // hr).squeeze()
+                with tf.Session() as sess:
+                    img_hr = sess.run(tf.image.resize_nearest_neighbor(img_hr[np.newaxis,:] if len(img_hr.shape)==3 else img_hr, [hr,hr])).squeeze()
 
             img_mr = tool.downscale_image(img_hr, hr // mr).squeeze()
             img_lr = tool.downscale_image(img_hr, hr // lr).squeeze()
+            # img_mr = sess.run(tf.image.resize_nearest_neighbor(img_hr, [mr,mr]))
+            # img_lr = sess.run(tf.image.resize_nearest_neighbor(img_hr, [lr,lr]))
 
             label = tf.compat.as_bytes(
                 data_list[idx].split('/')[-1][:-4], encoding='utf-8'
@@ -205,11 +212,17 @@ def solar_dataset(years=[2009, 2010, 2011], lr=20, mr=100, hr=500, mode="train")
             for idx, image in enumerate(tqdm(data_list)):
                 img_hr = np.load(image).astype('float64')
                 if not img_hr.shape[0] == hr:
-                    img_hr = tool.downscale_image(
-                        img_hr, img_hr.shape[0] // hr
-                    ).squeeze()
+                    # this function only accept integer scaling
+                    # img_hr = tool.downscale_image(
+                    #     img_hr, img_hr.shape[0] // hr
+                    # ).squeeze()
+                    
+                    # this function is quite slow
+                    with tf.Session() as sess:
+                        img_hr = sess.run(tf.image.resize_nearest_neighbor(img_hr[np.newaxis,:] if len(img_hr.shape)==3 else img_hr, [hr,hr])).squeeze()
 
                 img_mr = tool.downscale_image(img_hr, hr // mr).squeeze()
+                # img_mr = sess.run(tf.image.resize_nearest_neighbor(img_hr, [mr,mr]))
 
                 label = tf.compat.as_bytes(
                     data_list[idx].split('/')[-1][:-4], encoding='utf-8'
@@ -223,10 +236,14 @@ def solar_dataset(years=[2009, 2010, 2011], lr=20, mr=100, hr=500, mode="train")
         for idx, image in enumerate(tqdm(data_list)):
             img_hr = np.load(image).astype('float64')
             if not img_hr.shape[0] == hr:
-                img_hr = tool.downscale_image(img_hr, img_hr.shape[0] // hr).squeeze()
+                # img_hr = tool.downscale_image(img_hr, img_hr.shape[0] // hr).squeeze()
+                with tf.Session() as sess:
+                    img_hr = sess.run(tf.image.resize_nearest_neighbor(img_hr[np.newaxis,:] if len(img_hr.shape)==3 else img_hr, [hr,hr])).squeeze()
 
             img_mr = tool.downscale_image(img_hr, hr // mr).squeeze()
             img_lr = tool.downscale_image(img_hr, hr // lr).squeeze()
+            # img_mr = sess.run(tf.image.resize_nearest_neighbor(img_hr, [mr,mr]))
+            # img_lr = sess.run(tf.image.resize_nearest_neighbor(img_hr, [lr,lr]))
 
             label = tf.compat.as_bytes(
                 data_list[idx].split('/')[-1][:-4], encoding='utf-8'
@@ -238,9 +255,13 @@ def solar_2009(lr=20, mr=100, hr=500, mode="train"):
     # LR-MR (20, 20, 2) --> (100, 100, 2)
     # MR-HR (100, 100, 2) --> (500, 500, 2)
     data_list = glob(
-        '/home/guiyli/Documents/DataSet/NSRDB/500X500/2009/grid1/dni_dhi/'+mode+'/*.npy'
+        # '/home/guiyli/Documents/DataSet/NSRDB/500X500/2009/grid1/dni_dhi/'+mode+'/*.npy'
+        
+        # HPCC path
+        '/home/guiyli/DataSet/Solar/2009/dni_dhi/'+mode+'/*.npy'
     )
     tfrecord_path = 'example_data/'
+
     # --------------------------------
     # MR-HR
     if mode == "train":  # there is only LR data in test dataset
@@ -249,9 +270,12 @@ def solar_2009(lr=20, mr=100, hr=500, mode="train"):
             for idx, image in enumerate(tqdm(data_list)):
                 img_hr = np.load(image).astype('float64')
                 if not img_hr.shape[0] == hr:
-                    img_hr = tool.downscale_image(img_hr, img_hr.shape[0] // hr).squeeze()
+                    # img_hr = tool.downscale_image(img_hr, img_hr.shape[0] // hr).squeeze()
+                    with tf.Session() as sess:
+                        img_hr = sess.run(tf.image.resize_nearest_neighbor(img_hr[np.newaxis,:] if len(img_hr.shape)==3 else img_hr, [hr,hr])).squeeze()
 
                 img_mr = tool.downscale_image(img_hr, hr // mr).squeeze()
+                # img_mr = sess.run(tf.image.resize_nearest_neighbor(img_hr, [mr,mr]))
 
                 label = tf.compat.as_bytes(
                     data_list[idx].split('/')[-1][:-4], encoding='utf-8'
@@ -265,10 +289,14 @@ def solar_2009(lr=20, mr=100, hr=500, mode="train"):
         for idx, image in enumerate(tqdm(data_list)):
             img_hr = np.load(image).astype('float64')
             if not img_hr.shape[0] == hr:
-                img_hr = tool.downscale_image(img_hr, img_hr.shape[0] // hr).squeeze()
+                # img_hr = tool.downscale_image(img_hr, img_hr.shape[0] // hr).squeeze()
+                with tf.Session() as sess:
+                    img_hr = sess.run(tf.image.resize_nearest_neighbor(img_hr[np.newaxis,:] if len(img_hr.shape)==3 else img_hr, [hr,hr])).squeeze()
 
             img_mr = tool.downscale_image(img_hr, hr // mr).squeeze()
             img_lr = tool.downscale_image(img_hr, hr // lr).squeeze()
+            # img_mr = sess.run(tf.image.resize_nearest_neighbor(img_hr, [mr,mr]))
+            # img_lr = sess.run(tf.image.resize_nearest_neighbor(img_hr, [lr,lr]))
 
             label = tf.compat.as_bytes(
                 data_list[idx].split('/')[-1][:-4], encoding='utf-8'
@@ -279,9 +307,9 @@ def solar_2009(lr=20, mr=100, hr=500, mode="train"):
 if __name__ == '__main__':
     # wind_dataset(years=[2007, 2008], lr=10, mr=100, hr=500, mode="train")
     # wind_dataset(years=[2010], lr=10, mr=100, hr=500, mode="test")
-    solar_dataset(years=[2007, 2008, 2009, 2010, 2011, 2012], lr=20, mr=100, hr=500, mode="train")
-    solar_dataset(years=[2013], lr=20, mr=100, hr=500, mode="test")
+    # solar_dataset(years=[2007, 2008, 2009, 2010, 2011, 2012], lr=20, mr=100, hr=500, mode="train")
+    # solar_dataset(years=[2013], lr=20, mr=100, hr=500, mode="test")
 
-    # solar_2009(lr=20, mr=100, hr=500, mode="train")
-    # solar_2009(lr=20, mr=100, hr=500, mode="test")
+    solar_2009(lr=20, mr=100, hr=500, mode="train")
+    solar_2009(lr=20, mr=100, hr=500, mode="test")
 

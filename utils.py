@@ -163,6 +163,9 @@ def _int64_feature(value):
 
 
 def downscale_image(x, K):
+    """
+    only accept integer scaling
+    """
     tf.reset_default_graph()
 
     if x.ndim == 3:
