@@ -112,7 +112,7 @@ def wind_dataset(years=[2007, 2008], lr=10, mr=100, hr=500, mode="train"):
     data_list = []
     for year in years:
         data_list += glob(
-            '/home/guiyli/Documents/DataSet/Wind/' + str(year) + '/u_v/*.npy'
+            '/lustre/scratch/guiyli/Dataset_WIND/npyFiles/u_v/' + str(year) + '/*.npy'
         )
 
     # TFRecord generate method by the author, but cannot handle large dataset.
@@ -146,10 +146,10 @@ def wind_dataset(years=[2007, 2008], lr=10, mr=100, hr=500, mode="train"):
     #     TFRecord_path_lr_mr, data_batches_mr, data_batches_lr, 'train'
     # )
 
+    tfrecord_path = '/lustre/scratch/guiyli/Dataset_WIND/PhIRE/'
     # --------------------------------
     # MR-HR
     if mode == "train":  # there is only LR data in test dataset
-        tfrecord_path = 'example_data/'
         tfrecord_name = 'wind_' + ','.join([str(e) for e in years]) + '_MR-HR-' + mode
         with TFRecordExporter(tfrecord_path, len(data_list), tfrecord_name) as tfr:
             for idx, image in enumerate(tqdm(data_list)):
@@ -171,7 +171,6 @@ def wind_dataset(years=[2007, 2008], lr=10, mr=100, hr=500, mode="train"):
 
     # --------------------------------
     # LR-MR
-    tfrecord_path = 'example_data/'
     tfrecord_name = 'wind_' + ','.join([str(e) for e in years]) + '_LR-MR-' + mode
     with TFRecordExporter(tfrecord_path, len(data_list), tfrecord_name) as tfr:
         for idx, image in enumerate(tqdm(data_list)):
@@ -310,6 +309,8 @@ if __name__ == '__main__':
     # solar_dataset(years=[2007, 2008, 2009, 2010, 2011, 2012], lr=20, mr=100, hr=500, mode="train")
     # solar_dataset(years=[2013], lr=20, mr=100, hr=500, mode="test")
 
-    solar_2009(lr=20, mr=100, hr=500, mode="train")
-    solar_2009(lr=20, mr=100, hr=500, mode="test")
+    # solar_2009(lr=20, mr=100, hr=500, mode="train")
+    # solar_2009(lr=20, mr=100, hr=500, mode="test")
+    wind_dataset(years=[2007, 2008, 2009, 2010, 2011, 2012], lr=10, mr=100, hr=500, mode="train")
+    wind_dataset(years=[2013], lr=10, mr=100, hr=500, mode="test")
 
