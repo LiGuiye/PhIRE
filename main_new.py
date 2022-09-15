@@ -12,18 +12,22 @@ def train(
     if dataset_name == "solar_2007,2008,2009,2010,2011,2012":
         # this one is too large
         data_path = '/lustre/scratch/guiyli/Dataset_NSRDB/PhIRE/solar_2007,2008,2009,2010,2011,2012_LR-MR-train.tfrecord'
+    elif dataset_name == "wind_07-12":
+        data_path = "/lustre/scratch/guiyli/Dataset_WIND/PhIRE/wind_2007,2008,2009,2010,2011,2012_LR-MR-train.tfrecord"
     else:
         data_path = 'example_data/' + dataset_name + '_LR-MR-train.tfrecord'
     model_path = None
     r = [5] if data_type == 'solar' else [2, 5]
     phiregans = PhIREGANs(
-        data_type=data_type, mu_sig=None, print_every=400, N_epochs=epoch
+        data_type=data_type, mu_sig=None, print_every=4000, N_epochs=epoch
     )
     # train cnn
+    phiregans.N_epochs = 2000
     model_dir = phiregans.pretrain(
         r=r, data_path=data_path, model_path=model_path, batch_size=batch_size
     )
     # train gan
+    phiregans.N_epochs = 200
     model_dir = phiregans.train(
         r=r, data_path=data_path, model_path=model_dir, batch_size=batch_size
     )
@@ -33,18 +37,22 @@ def train(
     if dataset_name == "solar_2007,2008,2009,2010,2011,2012":
         # this one is too large
         data_path = '/lustre/scratch/guiyli/Dataset_NSRDB/PhIRE/solar_2007,2008,2009,2010,2011,2012_MR-HR-train.tfrecord'
+    elif dataset_name == "wind_07-12":
+        data_path = "/lustre/scratch/guiyli/Dataset_WIND/PhIRE/wind_2007,2008,2009,2010,2011,2012_MR-HR-train.tfrecord"
     else:
         data_path = 'example_data/' + dataset_name + '_MR-HR-train.tfrecord'
     model_path = None
     r = [5]
     phiregans = PhIREGANs(
-        data_type=data_type, mu_sig=None, print_every=400, N_epochs=epoch
+        data_type=data_type, mu_sig=None, print_every=4000, N_epochs=epoch
     )
     # train cnn
+    phiregans.N_epochs = 200
     model_dir = phiregans.pretrain(
         r=r, data_path=data_path, model_path=model_path, batch_size=batch_size
     )
     # train gan
+    phiregans.N_epochs = 20
     model_dir = phiregans.train(
         r=r, data_path=data_path, model_path=model_dir, batch_size=batch_size
     )
