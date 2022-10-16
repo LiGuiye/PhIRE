@@ -108,12 +108,13 @@ class TFRecordExporter:
         self.close()
 
 
-def wind_dataset(years=[2007, 2008], lr=10, mr=100, hr=500, mode="train"):
+def wind_dataset(years=[2007, 2008], lr=10, mr=100, hr=500, mode="train", device='HPCC'):
     data_list = []
     for year in years:
-        data_list += glob(
-            '/lustre/scratch/guiyli/Dataset_WIND/npyFiles/u_v/' + str(year) + '/*.npy'
-        )
+        if device == 'HPCC':
+            data_list += glob('/lustre/scratch/guiyli/Dataset_WIND/npyFiles/u_v/' + str(year) + '/*.npy')
+        else:
+            data_list += glob('/home/guiyli/Documents/DataSet/Wind/' + str(year) + '/u_v/*.npy')
 
     # TFRecord generate method by the author, but cannot handle large dataset.
     # TFRecord_path_mr_hr = (
@@ -146,7 +147,7 @@ def wind_dataset(years=[2007, 2008], lr=10, mr=100, hr=500, mode="train"):
     #     TFRecord_path_lr_mr, data_batches_mr, data_batches_lr, 'train'
     # )
 
-    tfrecord_path = '/lustre/scratch/guiyli/Dataset_WIND/PhIRE/'
+    tfrecord_path = '/lustre/scratch/guiyli/Dataset_WIND/PhIRE/' if device == 'HPCC' else '/home/guiyli/Documents/DataSet/Wind/PhIRE/'
     # --------------------------------
     # MR-HR
     if mode == "train":  # there is only LR data in test dataset
@@ -215,7 +216,7 @@ def solar_dataset(years=[2009, 2010, 2011], lr=20, mr=100, hr=500, mode="train")
                     # img_hr = tool.downscale_image(
                     #     img_hr, img_hr.shape[0] // hr
                     # ).squeeze()
-                    
+
                     # this function is quite slow
                     with tf.Session() as sess:
                         img_hr = sess.run(tf.image.resize_nearest_neighbor(img_hr[np.newaxis,:] if len(img_hr.shape)==3 else img_hr, [hr,hr])).squeeze()
@@ -255,7 +256,7 @@ def solar_2009(lr=20, mr=100, hr=500, mode="train"):
     # MR-HR (100, 100, 2) --> (500, 500, 2)
     data_list = glob(
         # '/home/guiyli/Documents/DataSet/NSRDB/500X500/2009/grid1/dni_dhi/'+mode+'/*.npy'
-        
+
         # HPCC path
         '/home/guiyli/DataSet/Solar/2009/dni_dhi/'+mode+'/*.npy'
     )
@@ -311,6 +312,7 @@ if __name__ == '__main__':
 
     # solar_2009(lr=20, mr=100, hr=500, mode="train")
     # solar_2009(lr=20, mr=100, hr=500, mode="test")
-    wind_dataset(years=[2007, 2008, 2009, 2010, 2011, 2012], lr=10, mr=100, hr=500, mode="train")
-    wind_dataset(years=[2013], lr=10, mr=100, hr=500, mode="test")
+    # wind_dataset(years=[2007, 2008, 2009, 2010, 2011, 2012], lr=10, mr=100, hr=500, mode="train")
+    # wind_dataset(years=[2013], lr=10, mr=100, hr=500, mode="test")
 
+    wind_dataset(years=[2014], lr=10, mr=100, hr=500, mode="test", device='PC')
