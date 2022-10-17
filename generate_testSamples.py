@@ -139,10 +139,17 @@ def generate_test_dataset(data_type, lr=10, hr=500, sample_indices = None, sampl
         print(data_type, "test dataset already exist")
 
 
-def generate_test_dataset_all(dataset_name="solar_2009", lr=10, hr=500, hpcc=True):
-    real_npy_path = 'example_data/' + dataset_name + '_testAll_real.npy'
-    lr_npy_path = 'example_data/' + dataset_name + '_testAll_lr.npy'
-    lr_tfrecord_path = 'example_data/' + dataset_name + '_testAll_lr.tfrecord'
+def generate_test_dataset_all(dataset_name="solar_2009", lr=10, mr=100, hr=500, hpcc=True):
+    if hpcc:
+        real_npy_path = '/lustre/scratch/guiyli/Dataset_WIND/PhIRE/' + dataset_name + '_testAll_real.npy'
+        lr_npy_path = '/lustre/scratch/guiyli/Dataset_WIND/PhIRE/' + dataset_name + '_testAll_lr.npy'
+        mr_npy_path = '/lustre/scratch/guiyli/Dataset_WIND/PhIRE/' + dataset_name + '_testAll_mr.npy'
+        lr_tfrecord_path = '/lustre/scratch/guiyli/Dataset_WIND/PhIRE/' + dataset_name + '_testAll_lr.tfrecord'
+        mr_tfrecord_path = '/lustre/scratch/guiyli/Dataset_WIND/PhIRE/' + dataset_name + '_testAll_mr.tfrecord'
+    else:
+        real_npy_path = 'example_data/' + dataset_name + '_testAll_real.npy'
+        lr_npy_path = 'example_data/' + dataset_name + '_testAll_lr.npy'
+        lr_tfrecord_path = 'example_data/' + dataset_name + '_testAll_lr.tfrecord'
 
     if dataset_name == 'solar_2009':
         if hpcc:
@@ -155,33 +162,32 @@ def generate_test_dataset_all(dataset_name="solar_2009", lr=10, hr=500, hpcc=Tru
         else:
             dataset_path = '/home/guiyli/Documents/DataSet/Wind/2014/u_v'
     images_path = glob(dataset_path + '/*.npy')
-
-    data_out_lr = None
-    data_out_real = None
+    images_channel = 2
+    images_num = len(images_path)
+    data_out_lr = np.empty((images_num, lr, lr, images_channel))
+    data_out_mr = np.empty((images_num, mr, mr, images_channel))
+    data_out_real = np.empty((images_num, hr, hr, images_channel))
     for i in tqdm(range(len(images_path))):
         img_hr = np.load(images_path[i]).astype(np.float64)
         if not img_hr.shape[0] == hr:
             with tf.Session() as sess:
                 img_hr = sess.run(tf.image.resize_nearest_neighbor(img_hr[np.newaxis,:] if len(img_hr.shape)==3 else img_hr, [hr,hr])).squeeze()
         data_lr = utils.downscale_image(img_hr, hr // lr)
-        if data_out_lr is None:
-        # if data_out_real is None:
-            data_out_lr = data_lr
-            data_out_real = img_hr[np.newaxis, :, :, :]
-        else:
-            data_out_lr = np.concatenate((data_out_lr, data_lr), axis=0)
-            data_out_real = np.concatenate(
-                (data_out_real, img_hr[np.newaxis,]), axis=0
-            )
-    # original data range:
-    # real: 0-1107, 208*500*500*2
-    # lr: 0-1159.918400000002, 208*20*20*2
+        data_mr = utils.downscale_image(img_hr, hr // mr)
+
+        data_out_lr[i] = data_lr
+        data_out_mr[i] = data_mr
+        data_out_real[i] = img_hr
 
     np.save(real_npy_path, data_out_real) # N, 500, 500, 2
+    np.save(mr_npy_path, data_out_mr) # N, 100, 100, 2
     np.save(lr_npy_path, data_out_lr) # N, 10, 10, 2
 
     utils.generate_TFRecords(
         lr_tfrecord_path, data_HR=data_out_lr, data_LR=data_out_lr, mode='test',
+    )
+    utils.generate_TFRecords(
+        mr_tfrecord_path, data_HR=data_out_mr, data_LR=data_out_mr, mode='test',
     )
 
 
@@ -235,15 +241,18 @@ def generate_test_samples(
 
 
 def generate_test_samples_all(
-    data_type="solar", dataset_name = "solar_2009", model_name='wind_07-10_bs4_epoch10', r_lr_mr=[2, 5], r_mr_hr=[5]
+    data_type="solar", dataset_name = "solar_2009", model_name='wind_07-10_bs4_epoch10', r_lr_mr=[2, 5], r_mr_hr=[5], hpcc=False
 ):
     phiregans = PhIREGANs(data_type=data_type)
     # -------------------------------------------------------------
     # LR-MR wind (10, 10, 2) solar (20,20,2)--> (100, 100, 2)
-    data_path = 'example_data/' + dataset_name + '_testAll_lr.tfrecord'
+    if hpcc:
+        data_path = '/lustre/scratch/guiyli/Dataset_WIND/PhIRE/' + dataset_name + '_testAll_lr.tfrecord'
+    else:
+        data_path = 'example_data/' + dataset_name + '_testAll_lr.tfrecord'
     model_path = 'models/' + model_name + '/' + data_type + '_lr-mr/trained_gan/gan'
-    phiregans.mu_sig = calc_mu_sig_for_test(data_path)
-    # testAll_lr [array([487.29226592, 487.29226592]), array([337.80788815, 337.80788815])]
+    # phiregans.mu_sig = calc_mu_sig_for_test(data_path)
+    phiregans.mu_sig = [[0.7684, -0.4575], [4.9491, 5.8441]]
     data_out_path = phiregans.test(
         r=r_lr_mr,
         data_path=data_path,
@@ -267,16 +276,21 @@ def generate_test_samples_all(
 
     # -------------------------------------------------------------
     # MR-HR (100, 100, 2) --> (500, 500, 2)
+
+    # fakr mr images
     data_path = data_out_path + '/' + data_type + '_testAll_result_mr.tfrecord'
+    # real mr images
+    # data_path = '/lustre/scratch/guiyli/Dataset_WIND/PhIRE/' + dataset_name + '_testAll_mr.tfrecord'
     model_path = 'models/' + model_name + '/' + data_type + '_mr-hr/trained_gan/gan'
-    phiregans.mu_sig = calc_mu_sig_for_test(data_path) # [array([490.55524943, 483.99321082]), array([343.87597369, 344.07098301])]
-    phiregans.test(
+    # phiregans.mu_sig = calc_mu_sig_for_test(data_path)
+    phiregans.mu_sig = [[0.7684, -0.4575], [5.02455, 5.9017]]
+    data_out_path = phiregans.test(
         r=r_mr_hr,
         data_path=data_path,
         model_path=model_path,
         plot_data=False,
         batch_size=8,
-    ) # range [-206.3111427851751, 834.0969354017284]
+    )
     os.rename(
         data_out_path + '/dataSR.npy',
         data_out_path + '/' + data_type + '_testAll_result_hr.npy',
@@ -365,19 +379,54 @@ def plot_test_samples(fake_path, data_type, batch_size=4, sampleNum=50):
         print('Saved', output_file)
 
 
+def calc_metrics(real_path, fake_path, combine=True, save_name=None):
+    real = np.load(real_path) # NHWC
+    fake = np.load(fake_path) # NHWC
+    n, h, w, c = real.shape
+    metrics_min, metrics_max = 0, 0
+    metrics = {'mse':[],'swd':[]}
+    if combine:
+        for i in tqdm(range(n)):
+            mse = np.mean(np.square(real[i]-fake[i])) 
+            relative_mse = mse / np.square(real[i].mean())
+            metrics['mse'].append(relative_mse)
+
+            metrics_min = metrics_min if real[i].min() > metrics_min else real[i].min()
+            metrics_max = metrics_max if real[i].max() < metrics_max else real[i].max()
+
+    print('Test set range')
+    print('Max:',metrics_max,'Min',metrics_min, 'Range:', metrics_max-metrics_min)
+    print('MSE mean')
+    print(np.mean(metrics['mse']))
+    print('MSE median')
+    print(np.median(metrics['mse']))
+    if save_name:
+        np.save(
+            os.path.join('/'.join(fake_path.split('/')[:2]), save_name), metrics['mse']
+        )
+
 if __name__ == '__main__':
     # WIND Total Scale: 50X
     # ----------------------------------
-    generate_test_dataset_all('wind_2014', 10, 500, hpcc=False)
+    # generate test dataset for Wind_2014
+    generate_test_dataset_all('wind_2014', 10, 100, 500, hpcc=True)
+    # generate mr and hr output for entire Wind_2014 dataset
+    data_out_path = generate_test_samples_all(
+        'wind', 'wind_2014', model_name='pretrained_wind', r_lr_mr=[2, 5], r_mr_hr=[5], hpcc=True
+    )
+    print('data_out_path:', data_out_path)
 
-    # mr and hr output for Wind_2014 entire dataset
-    # phiregans = PhIREGANs(data_type='wind', mu_sig=None)
-    # data_out_path = generate_test_samples_all(
-    #     'wind', 'wind_2014', model_name='pretrained_wind', r_lr_mr=[2, 5], r_mr_hr=[5]
-    # )
-    # print('data_out_path:', data_out_path)
-
-
+    # calculate MSE
+    data_out_path = 'data_out/wind-20221016-153330' # lr_mr_hr
+    # 10X
+    real_path = '/lustre/scratch/guiyli/Dataset_WIND/PhIRE/wind_2014_testAll_mr.npy'
+    fake_path = data_out_path+'/wind_testAll_result_mr.npy'
+    calc_metrics(real_path, fake_path, combine=True, save_name='error_mse_lr_mr.npy')
+    # data_out_path = 'data_out/wind-20221016-170305' # mr_hr (5X)
+    # 50X or 5X
+    real_path = '/lustre/scratch/guiyli/Dataset_WIND/PhIRE/wind_2014_testAll_real.npy'
+    fake_path = data_out_path+'/wind_testAll_result_hr.npy'
+    calc_metrics(real_path, fake_path, combine=True, save_name='error_mse_mr_hr.npy')
 
     # sample_indices = [666]
     # sampleNum = len(sample_indices)
