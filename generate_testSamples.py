@@ -141,11 +141,18 @@ def generate_test_dataset(data_type, lr=10, hr=500, sample_indices = None, sampl
 
 def generate_test_dataset_all(dataset_name="solar_2009", lr=10, mr=100, hr=500, hpcc=True):
     if hpcc:
-        real_npy_path = '/lustre/scratch/guiyli/Dataset_WIND/PhIRE/' + dataset_name + '_testAll_real.npy'
-        lr_npy_path = '/lustre/scratch/guiyli/Dataset_WIND/PhIRE/' + dataset_name + '_testAll_lr.npy'
-        mr_npy_path = '/lustre/scratch/guiyli/Dataset_WIND/PhIRE/' + dataset_name + '_testAll_mr.npy'
-        lr_tfrecord_path = '/lustre/scratch/guiyli/Dataset_WIND/PhIRE/' + dataset_name + '_testAll_lr.tfrecord'
-        mr_tfrecord_path = '/lustre/scratch/guiyli/Dataset_WIND/PhIRE/' + dataset_name + '_testAll_mr.tfrecord'
+        if dataset_name.split('_')[0]=='wind':
+            real_npy_path = '/lustre/scratch/guiyli/Dataset_WIND/PhIRE/' + dataset_name + '_testAll_real.npy'
+            lr_npy_path = '/lustre/scratch/guiyli/Dataset_WIND/PhIRE/' + dataset_name + '_testAll_lr.npy'
+            mr_npy_path = '/lustre/scratch/guiyli/Dataset_WIND/PhIRE/' + dataset_name + '_testAll_mr.npy'
+            lr_tfrecord_path = '/lustre/scratch/guiyli/Dataset_WIND/PhIRE/' + dataset_name + '_testAll_lr.tfrecord'
+            mr_tfrecord_path = '/lustre/scratch/guiyli/Dataset_WIND/PhIRE/' + dataset_name + '_testAll_mr.tfrecord'
+        elif dataset_name.split('_')[0] == 'solar':
+            real_npy_path = '/lustre/scratch/guiyli/Dataset_NSRDB/PhIRE/' + dataset_name + '_testAll_real.npy'
+            lr_npy_path = '/lustre/scratch/guiyli/Dataset_NSRDB/PhIRE/' + dataset_name + '_testAll_lr.npy'
+            mr_npy_path = '/lustre/scratch/guiyli/Dataset_NSRDB/PhIRE/' + dataset_name + '_testAll_mr.npy'
+            lr_tfrecord_path = '/lustre/scratch/guiyli/Dataset_NSRDB/PhIRE/' + dataset_name + '_testAll_lr.tfrecord'
+            mr_tfrecord_path = '/lustre/scratch/guiyli/Dataset_NSRDB/PhIRE/' + dataset_name + '_testAll_mr.tfrecord'
     else:
         real_npy_path = 'example_data/' + dataset_name + '_testAll_real.npy'
         lr_npy_path = 'example_data/' + dataset_name + '_testAll_lr.npy'
@@ -161,6 +168,11 @@ def generate_test_dataset_all(dataset_name="solar_2009", lr=10, mr=100, hr=500, 
             dataset_path = '/lustre/scratch/guiyli/Dataset_WIND/DIP/Wind2014_removed/u_v'
         else:
             dataset_path = '/home/guiyli/Documents/DataSet/Wind/2014/u_v'
+    elif dataset_name == 'solar_2014':
+        if hpcc:
+            dataset_path = '/lustre/scratch/guiyli/Dataset_NSRDB/DIP/Solar2014_removed'
+        else:
+            dataset_path = '/home/guiyli/Documents/DataSet/Solar/npyFiles/dni_dhi/2014'
     images_path = glob(dataset_path + '/*.npy')
     images_channel = 2
     images_num = len(images_path)
@@ -182,6 +194,7 @@ def generate_test_dataset_all(dataset_name="solar_2009", lr=10, mr=100, hr=500, 
     np.save(real_npy_path, data_out_real) # N, 500, 500, 2
     np.save(mr_npy_path, data_out_mr) # N, 100, 100, 2
     np.save(lr_npy_path, data_out_lr) # N, 10, 10, 2
+    del data_out_real
 
     utils.generate_TFRecords(
         lr_tfrecord_path, data_HR=data_out_lr, data_LR=data_out_lr, mode='test',
@@ -247,7 +260,10 @@ def generate_test_samples_all(
     # -------------------------------------------------------------
     # LR-MR wind (10, 10, 2) solar (20,20,2)--> (100, 100, 2)
     if hpcc:
-        data_path = '/lustre/scratch/guiyli/Dataset_WIND/PhIRE/' + dataset_name + '_testAll_lr.tfrecord'
+        if data_type == 'wind':
+            data_path = '/lustre/scratch/guiyli/Dataset_WIND/PhIRE/' + dataset_name + '_testAll_lr.tfrecord'
+        elif data_type == 'solar':
+            data_path = '/lustre/scratch/guiyli/Dataset_NSRDB/PhIRE/' + dataset_name + '_testAll_lr.tfrecord'
     else:
         data_path = 'example_data/' + dataset_name + '_testAll_lr.tfrecord'
     model_path = 'models/' + model_name + '/' + data_type + '_lr-mr/trained_gan/gan'
@@ -384,12 +400,12 @@ def calc_metrics(real_path, fake_path, combine=True, save_name=None):
     fake = np.load(fake_path) # NHWC
     n, h, w, c = real.shape
     metrics_min, metrics_max = 0, 0
-    metrics = {'mse':[],'swd':[]}
+    metrics = {'mse':[None]*n,'swd':[]}
     if combine:
         for i in tqdm(range(n)):
             mse = np.mean(np.square(real[i]-fake[i])) 
             relative_mse = mse / np.square(real[i].mean())
-            metrics['mse'].append(relative_mse)
+            metrics['mse'][i] = relative_mse
 
             metrics_min = metrics_min if real[i].min() > metrics_min else real[i].min()
             metrics_max = metrics_max if real[i].max() < metrics_max else real[i].max()
@@ -406,27 +422,50 @@ def calc_metrics(real_path, fake_path, combine=True, save_name=None):
         )
 
 if __name__ == '__main__':
-    # WIND Total Scale: 50X
+    # # WIND Total Scale: 50X
+    # # ----------------------------------
+    # # generate test dataset for Wind_2014
+    # generate_test_dataset_all('wind_2014', 10, 100, 500, hpcc=True)
+    # # generate mr and hr output for entire Wind_2014 dataset
+    # data_out_path = generate_test_samples_all(
+    #     'wind', 'wind_2014', model_name='pretrained_wind', r_lr_mr=[2, 5], r_mr_hr=[5], hpcc=True
+    # )
+    # print('data_out_path:', data_out_path)
+
+    # # calculate MSE
+    # data_out_path = 'data_out/wind-20221016-153330' # lr_mr_hr
+    # # 10X
+    # real_path = '/lustre/scratch/guiyli/Dataset_WIND/PhIRE/wind_2014_testAll_mr.npy'
+    # fake_path = data_out_path+'/wind_testAll_result_mr.npy'
+    # calc_metrics(real_path, fake_path, combine=True, save_name='error_mse_lr_mr.npy')
+    # # data_out_path = 'data_out/wind-20221016-170305' # mr_hr (5X)
+    # # 50X or 5X
+    # real_path = '/lustre/scratch/guiyli/Dataset_WIND/PhIRE/wind_2014_testAll_real.npy'
+    # fake_path = data_out_path+'/wind_testAll_result_hr.npy'
+    # calc_metrics(real_path, fake_path, combine=True, save_name='error_mse_mr_hr.npy')
+
+    # Solar Total Scale: 25X
     # ----------------------------------
     # generate test dataset for Wind_2014
-    generate_test_dataset_all('wind_2014', 10, 100, 500, hpcc=True)
+    # generate_test_dataset_all('solar_2014', 20, 100, 500, hpcc=True)
     # generate mr and hr output for entire Wind_2014 dataset
-    data_out_path = generate_test_samples_all(
-        'wind', 'wind_2014', model_name='pretrained_wind', r_lr_mr=[2, 5], r_mr_hr=[5], hpcc=True
-    )
-    print('data_out_path:', data_out_path)
+    # data_out_path = generate_test_samples_all(
+    #     'solar', 'solar_2014', model_name='pretrained_solar', r_lr_mr=[5], r_mr_hr=[5], hpcc=True
+    # )
+    # print('data_out_path:', data_out_path)
+
 
     # calculate MSE
-    data_out_path = 'data_out/wind-20221016-153330' # lr_mr_hr
-    # 10X
-    real_path = '/lustre/scratch/guiyli/Dataset_WIND/PhIRE/wind_2014_testAll_mr.npy'
-    fake_path = data_out_path+'/wind_testAll_result_mr.npy'
+    data_out_path = 'data_out/solar-20221020-115955' # lr_mr_hr
+    # 5X
+    real_path = '/lustre/scratch/guiyli/Dataset_NSRDB/PhIRE/solar_2014_testAll_mr.npy'
+    fake_path = data_out_path+'/solar_testAll_result_mr.npy'
     calc_metrics(real_path, fake_path, combine=True, save_name='error_mse_lr_mr.npy')
-    # data_out_path = 'data_out/wind-20221016-170305' # mr_hr (5X)
-    # 50X or 5X
-    real_path = '/lustre/scratch/guiyli/Dataset_WIND/PhIRE/wind_2014_testAll_real.npy'
-    fake_path = data_out_path+'/wind_testAll_result_hr.npy'
+    # 25X
+    real_path = '/lustre/scratch/guiyli/Dataset_NSRDB/PhIRE/solar_2014_testAll_real.npy'
+    fake_path = data_out_path+'/solar_testAll_result_hr.npy'
     calc_metrics(real_path, fake_path, combine=True, save_name='error_mse_mr_hr.npy')
+
 
     # sample_indices = [666]
     # sampleNum = len(sample_indices)
