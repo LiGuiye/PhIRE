@@ -88,20 +88,22 @@ def calc_metrics(real_path, fake_path, mse=True, swd=True, model_type=None):
     text_file.write("\n" + "Data Range: " + str(drange) + "\n")
     text_file.write(str(metrics_min) + ", " + str(metrics_max) + "\n")
 
-    text_file.write("\n" + "MSE/(mean^2) --> mean" + "\n")
-    text_file.write(str(np.mean(metrics_mse)) + "\n")
-    text_file.write("\n" + "MSE/(mean^2) --> median" + "\n")
-    text_file.write(str(np.median(metrics_mse)) + "\n")
+    if mse:
+        text_file.write("\n" + "MSE/(mean^2) --> mean" + "\n")
+        text_file.write(str(np.mean(metrics_mse)) + "\n")
+        text_file.write("\n" + "MSE/(mean^2) --> median" + "\n")
+        text_file.write(str(np.median(metrics_mse)) + "\n")
 
-    text_file.write("\n" + "SWD/(mean^2) --> mean" + "\n")
-    text_file.write(str(torch.mean(metrics_swd).numpy()) + "\n")
-    text_file.write("\n" + "SWD/(mean^2) --> median" + "\n")
-    text_file.write(str(torch.median(metrics_swd).numpy()) + "\n")
+    if swd:
+        text_file.write("\n" + "SWD/(mean^2) --> mean" + "\n")
+        text_file.write(str(torch.mean(metrics_swd).numpy()) + "\n")
+        text_file.write("\n" + "SWD/(mean^2) --> median" + "\n")
+        text_file.write(str(torch.median(metrics_swd).numpy()) + "\n")
     print("Validation metrics saved!")
     text_file.close()
 
 
-data_type_list = ['Wind', 'Solar']
+data_type_list = ['Solar']
 for data_type in data_type_list:
     if data_type == 'Wind':
         # calculate MSE
@@ -117,7 +119,8 @@ for data_type in data_type_list:
         calc_metrics(real_path, fake_path, mse=True, swd=True, model_type='mr_hr')
     elif data_type == 'Solar':
         # calculate MSE
-        data_out_path = 'data_out/solar-20221020-115955' # lr_mr_hr
+        # data_out_path = 'data_out/solar-20221020-115955' # lr_mr_hr
+        data_out_path = 'data_out/solar-20221107-081227'
         # 5X
         real_path = '/lustre/scratch/guiyli/Dataset_NSRDB/PhIRE/solar_2014_testAll_mr.npy'
         fake_path = data_out_path+'/solar_testAll_result_mr.npy'
