@@ -103,24 +103,22 @@ def calc_metrics(real_path, fake_path, mse=True, swd=True, model_type=None):
     text_file.close()
 
 
-data_type_list = ['Solar']
+data_type_list = ['Solar', 'Wind']
 for data_type in data_type_list:
     if data_type == 'Wind':
         # calculate MSE
-        data_out_path = 'data_out/wind-20221016-153330' # lr_mr_hr
+        data_out_path = 'data_out/wind-20221201-122446' # lr_mr_hr
         # 10X
         real_path = '/lustre/scratch/guiyli/Dataset_WIND/PhIRE/wind_2014_testAll_mr.npy'
         fake_path = data_out_path+'/wind_testAll_result_mr.npy'
         calc_metrics(real_path, fake_path, mse=True, swd=True, model_type='lr_mr')
-        # data_out_path = 'data_out/wind-20221016-170305' # mr_hr (5X)
         # 50X or 5X
         real_path = '/lustre/scratch/guiyli/Dataset_WIND/PhIRE/wind_2014_testAll_real.npy'
         fake_path = data_out_path+'/wind_testAll_result_hr.npy'
         calc_metrics(real_path, fake_path, mse=True, swd=True, model_type='mr_hr')
     elif data_type == 'Solar':
         # calculate MSE
-        # data_out_path = 'data_out/solar-20221020-115955' # lr_mr_hr
-        data_out_path = 'data_out/solar-20221107-081227'
+        data_out_path = 'data_out/solar-20221201-132000' # lr_mr_hr
         # 5X
         real_path = '/lustre/scratch/guiyli/Dataset_NSRDB/PhIRE/solar_2014_testAll_mr.npy'
         fake_path = data_out_path+'/solar_testAll_result_mr.npy'
